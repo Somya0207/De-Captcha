@@ -102,7 +102,9 @@ def render_char(ch, font, color):
     w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
     draw.text(
         ((CHAR_BOX - w) / 2 - bbox[0], (CHAR_BOX - h) / 2 - bbox[1]),
-        ch, font=font, fill=color + (255,)
+        ch, font=font, fill=color + (255,),
+        stroke_width=3, stroke_fill=color + (255,),  # fattens strokes so they
+                                                       # survive erosion later
     )
     return img
 
@@ -119,7 +121,7 @@ def generate_captcha(font_path: str = FONT_PATH):
     """
     bg_color = random_color()
     canvas = Image.new("RGB", (IMG_W, IMG_H), bg_color)
-    font = ImageFont.truetype(font_path, 40)
+    font = ImageFont.truetype(font_path, 44)
 
     label = "".join(random.choices(CHARSET, k=CAPTCHA_LEN))
     spacing = IMG_W // CAPTCHA_LEN
