@@ -4,6 +4,20 @@ An end-to-end pipeline that segments and recognizes characters in rotation-obfus
 
 **Result: 95% full-CAPTCHA accuracy (99.25% per-character accuracy) on 100 held-out synthetic CAPTCHAs, using an RBF-kernel SVM.**
 
+For the story of how this was built — including what broke and how it got fixed — see [REPORT.md](./REPORT.md).
+
+---
+
+## Pipeline in Action
+
+### Preprocessing: raw image to clean binary mask
+
+![Before and after preprocessing](docs/images/before_after_preprocessing.png)
+
+### Segmentation: cutting the cleaned image into individual characters
+
+![Segmented characters strip](docs/images/segmented_characters_strip.png)
+
 ---
 
 ## Problem Statement
