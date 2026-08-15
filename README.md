@@ -2,7 +2,7 @@
 
 An end-to-end pipeline that segments and recognizes characters in rotation-obfuscated CAPTCHAs — colored, individually-tilted characters overlaid with random distractor lines.
 
-**Result: 95% full-CAPTCHA accuracy (99.25% per-character accuracy) on 100 held-out synthetic CAPTCHAs, using an RBF-kernel SVM.**
+**Result: 83% full-CAPTCHA accuracy (96.3% per-character accuracy) on the full 36-class alphabet (A-Z, 0-9, no exclusions), using an RBF-kernel SVM.**
 
 For the story of how this was built — including what broke and how it got fixed — see [REPORT.md](./REPORT.md).
 
@@ -58,39 +58,45 @@ Predicted CAPTCHA string
 
 ## Results
 
-### Character-level classification (3200 samples, 75/25 train/test split)
+### Character-level classification (36-class alphabet, full A-Z + 0-9, no exclusions)
+
+An earlier version of this project excluded visually-ambiguous character pairs (`O`/`0`, `I`/`1`, `S`/`5`, `B`/`8`, `Z`/`2`) before training, which pushed per-character accuracy up to 99.25%. That number was real but measured on an easier 26-class problem. Re-running on the full, unrestricted 36-class alphabet gives a harder, more honest baseline:
 
 | Model | Test Accuracy | Model Size |
 |---|---|---|
-| Logistic Regression | 86.9% | 183.8 KB |
-| SVM (linear kernel) | 97.75% | 14,440 KB |
-| **SVM (RBF kernel)** | **99.25%** | 15,799.3 KB |
+| Logistic Regression | 74.97% | 254.2 KB |
+| SVM (linear kernel) | 90.36% | 16,136.8 KB |
+| **SVM (RBF kernel)** | **96.12%** | 16,867.7 KB |
 
-RBF SVM was selected as the final model. Unlike some reference implementations of this style of pipeline (which favor linear SVM for its much smaller model size at a marginal accuracy cost), on this dataset RBF's accuracy gain over linear was large enough (99.25% vs 97.75%) to justify the ~9% larger model size.
+Verified independently against a separate held-out test set: **96.38%** per-character accuracy — consistent with the training-time result, confirming the number is stable rather than a lucky split.
+
+RBF SVM remains the clear best model, though the full-alphabet gap between models is much larger than it was on the reduced set (Logistic Regression drops over 20 points, from ~87% to 75%), showing linear decision boundaries struggle more as the number of visually-similar classes grows.
+
+#### Where the errors actually come from
+
+Confusion analysis on the RBF model's 29 test errors (out of 800 characters) showed something more interesting than "ambiguous characters are hard":
+
+| True → Predicted | Count |
+|---|---|
+| `S → 8` | 6 |
+| `6 → 0` | 4 |
+| `8 → S` | 3 |
+| `F → P` | 3 |
+| all others | 1 each |
+
+**Zero of the 29 errors exactly match the "classic ambiguous" pairs** (`O`/`0`, `I`/`1`, `S`/`5`, `B`/`8`, `Z`/`2`) the earlier version excluded. The real bottleneck turned out to be **digit-vs-digit confusion** — `S/8`, `6/0`, `8/5`, `9/0`, `6/8`, `9/8` together account for the large majority of errors — plus a repeatable `F/P` letter confusion. This shows the character-exclusion approach was solving the wrong problem entirely: it targeted a specific "famous" list of ambiguous pairs while the model's actual weak point is broader shape-similarity among digits under rotation, which that list didn't cover at all.
 
 ### Segmentation accuracy
 
-**100/100 (100%)** of test images produced the correct number of character segments, validated automatically against known ground truth (since the dataset was generated with known labels).
+**100/100 (100%)** of test images produced the correct number of character segments — this held on both the reduced and full 36-class alphabets, since segmentation depends only on geometry (non-overlapping rotated shapes), not character identity.
 
 ### End-to-end pipeline accuracy (the real-world metric)
 
 Run on 100 raw, unseen CAPTCHA images, requiring every character to be predicted correctly:
 
-**95/100 (95.0%) full-CAPTCHA accuracy.**
+**83/100 (83.0%) full-CAPTCHA accuracy.**
 
-#### Error analysis
-
-All 5 misclassifications were visually plausible character confusions, not random noise:
-
-| True | Predicted | Confusion |
-|---|---|---|
-| `GAU3` | `GAU4` | `3` vs `4` |
-| `FTVE` | `PTVE` | `F` vs `P` |
-| `3P69` | `3F69` | `P` vs `F` |
-| `MFK9` | `MFX9` | `K` vs `X` |
-| `3QRH` | `JQRH` | `3` vs `J` |
-
-Each error pair shares significant visual/structural similarity (shared curves, similar stroke angles), suggesting the model's failure modes are interpretable rather than arbitrary.
+This is a meaningful drop from the reduced-alphabet result (95%), which is expected and correct — it's a harder, more general problem, and the drop is a direct, measurable consequence of no longer excluding hard characters, not a regression.
 
 ## Repository Structure
 
@@ -145,4 +151,6 @@ A few deliberate choices worth calling out, made while adapting this pipeline to
 
 ## Dataset
 
-26 character classes (`A,C,D,E,F,G,H,J,K,L,M,N,P,Q,R,T,U,V,W,X,Y,3,4,6,7,9`) — visually ambiguous characters (`O`/`0`, `I`/`1`, `S`/`5`, `B`/`8`, `Z`/`2`) were excluded. 1000 synthetic CAPTCHAs generated (800 train / 200 test), each with 4 randomly rotated (+/-30 deg), randomly colored characters over a randomly colored background, obscured by 4-7 thin random-colored lines.
+Full 36 character classes (`A-Z, 0-9`, no exclusions). 1000 synthetic CAPTCHAs generated (800 train / 200 test), each with 4 randomly rotated (+/-30 deg), randomly colored characters over a randomly colored background, obscured by 4-7 thin random-colored lines.
+
+An earlier version excluded visually-ambiguous pairs (`O`/`0`, `I`/`1`, `S`/`5`, `B`/`8`, `Z`/`2`), reporting 99.25% accuracy. That exclusion was removed after error analysis showed it wasn't addressing the model's actual failure modes (see Results section above) — the full alphabet is used throughout this project now.

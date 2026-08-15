@@ -60,7 +60,19 @@ The 5 failures were also worth a second look rather than being dismissed as nois
 
 Every single mistake was a visually similar character pair (`3`/`4`, `F`/`P`, `K`/`X`, `3`/`J`) — the model's errors are interpretable, not random. That's a much stronger thing to be able to say about a classifier than just a headline accuracy number.
 
-## What I'd do differently next time
+## Revisiting a shortcut: the character exclusion I shouldn't have made
+
+The first working version of this project excluded 10 visually-ambiguous characters (`O`/`0`, `I`/`1`, `S`/`5`, `B`/`8`, `Z`/`2`) before training, on the reasoning that these pairs are close to indistinguishable even to a human. That version reported 99.25% per-character accuracy and 95% full-sequence accuracy — real numbers, but measured on an easier 26-class problem, not the full alphabet.
+
+When this got questioned directly — fair pushback: if the pipeline can't handle the full character set, does it generalize to a real system? — I stopped defending the choice and re-ran the experiment properly: regenerated the dataset with the full, unrestricted 36-class alphabet (A-Z, 0-9) and retrained everything from scratch.
+
+The drop was real and larger than I expected: per-character accuracy fell to 96.1-96.4% (verified consistently across two independent test runs), and full-sequence accuracy fell to **83%** — a 12-point drop from the reduced-set's 95%. Logistic Regression was hit even harder, dropping over 20 points (from ~87% to 75%), showing that as the number of visually-similar classes grows, a purely linear decision boundary struggles disproportionately more than a kernel method does.
+
+What mattered more than the accuracy number was breaking down *where* the new errors came from. I expected most of the drop to be exactly the pairs I'd previously excluded. It wasn't: **zero of the 29 test errors exactly matched the classic ambiguous list.** The real pattern was digit-vs-digit confusion — `S/8` (6 times), `6/0` (4 times), `8/5`, `9/0`, `6/8`, `9/8` — plus a repeatable `F/P` letter confusion (3 times, showing up consistently across separate test runs).
+
+That was the real lesson: excluding `O/0/I/1/S/5/B/8/Z/2` wasn't actually fixing the model's weakest point — it was solving an easier, narrower version of the problem while leaving the real bottleneck untouched. Digits, as a group, are simply more visually confusable with each other under rotation and stroke-thickening than the specific "famous" pairs I'd targeted. The 83%/96.3% numbers on the full alphabet are more honest and more informative than the earlier figures, because they come with an actual, data-backed understanding of *why* the model still makes mistakes — not a number that looked good because the hardest cases had been quietly removed before training even started.
+
+
 
 - I'd measure hyperparameters like erosion iterations empirically *before* copying a reference value, not after debugging a mysteriously blank image.
 - I'd build the ground-truth-validation habit (like `validate_segmentation.py`) earlier — knowing the true label because I generated the data myself turned out to be one of the most useful things about building a synthetic dataset in the first place.

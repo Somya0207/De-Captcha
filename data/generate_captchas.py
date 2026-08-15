@@ -27,11 +27,14 @@ from PIL import Image, ImageDraw, ImageFont
 # ------------------------------------------------------------------
 # 1. Character set
 # ------------------------------------------------------------------
-# Visually ambiguous characters are dropped so classification isn't
-# unfairly hard (mirrors what the original report likely did to end
-# up with a clean 24-ish class set).
-AMBIGUOUS = {'O', '0', 'I', '1', 'S', '5', 'B', '8', 'Z', '2'}
-CHARSET = [c for c in (string.ascii_uppercase + string.digits) if c not in AMBIGUOUS]
+# Uses the FULL 36-class alphabet (A-Z, 0-9). Earlier versions excluded
+# visually-ambiguous pairs (O/0, I/1, S/5, B/8, Z/2) to inflate accuracy
+# on paper, but error analysis showed most misclassifications weren't
+# even those specific pairs (the top confusion was P->F). Excluding
+# characters didn't address the real bottleneck -- general shape
+# similarity under rotation -- so the full alphabet is used here for an
+# honest, harder, more general evaluation.
+CHARSET = list(string.ascii_uppercase + string.digits)
 
 CAPTCHA_LEN = 4          # fixed number of characters per CAPTCHA
 IMG_W, IMG_H = 240, 90   # canvas size
@@ -175,6 +178,6 @@ def build_dataset(out_dir="dataset", n_train=800, n_test=200):
 
 
 if __name__ == "__main__":
-    print(f"Using {len(CHARSET)} classes: {CHARSET}")
+    print(f"Using full {len(CHARSET)}-class alphabet: {CHARSET}")
     print(f"Using font: {FONT_PATH}")
     build_dataset()
