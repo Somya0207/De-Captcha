@@ -47,7 +47,7 @@ def get_font_path() -> str:
     """Find a usable TTF font on this machine, or download one if none exists.
 
     Colab / local Linux / Windows all have different default font locations,
-    so we check common paths first and fall back to downloading a font
+    so I need to check common paths first and fall back to downloading a font
     directly — this makes the script portable across environments.
     """
     candidates = [
