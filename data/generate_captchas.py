@@ -1,8 +1,7 @@
 """
 De-Captcha : Phase 1 — Synthetic CAPTCHA Generator
 ----------------------------------------------------
-Generates fake CAPTCHA images that mimic the properties of the original
-assignment's dataset:
+Generates CAPTCHA images:
     1. Character color != background color   (needed for grayscale + color
        subtraction preprocessing in Phase 2)
     2. Characters are individually rotated around their own center, but
